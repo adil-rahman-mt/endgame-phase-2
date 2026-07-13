@@ -1,0 +1,15 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='navbar.css') }}">
+
+<nav class="main-navbar">
+    <div class="nav-links">
+        <a href="/" class="nav-link-item">Home</a>
+        
+        {% if is_authenticated %}
+            <form action="/logout" method="POST" style="display: inline; margin: 0;">
+                <button type="submit" class="btn-logout">Log Out</button>
+            </form>
+        {% else %}
+            <a href="/login" class="nav-link-item">Log In</a>
+        {% endif %}
+    </div>
+</nav>

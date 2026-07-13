@@ -1,39 +1,51 @@
-<h1>Coins</h1>
-<ul>
-    {% for coin in coins %}
-        <li>
-            <strong>{{ coin.name }}</strong>
-            
-            {% if coin.completed %}
-                <span>(Completed)</span>
-            {% else %}
-                <span>(In Progress)</span>
-            {% endif %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>L4 DevOps Apprenticeship</title>
+    </head>
+    <body>
+        {% include 'navbar.html' %}
 
-            {% if coin.duties|length == 0 %}
-                <p>There are no duties associated with this coin</p>
-            {% endif %}
-
+        <h1>Coins</h1>
             <ul>
-                {% for duty in coin.duties %}
+                {% for coin in coins %}
                     <li>
-                       <button type="button" class="open-duty-modal-btn" data-duty-name="{{ duty }}">{{ duty }}</button>
+                        <strong>{{ coin.name }}</strong>
+                        
+                        {% if coin.completed %}
+                            <span>(Completed)</span>
+                        {% else %}
+                            <span>(In Progress)</span>
+                        {% endif %}
+
+                        {% if coin.duties|length == 0 %}
+                            <p>There are no duties associated with this coin</p>
+                        {% endif %}
+
+                        <ul>
+                            {% for duty in coin.duties %}
+                                <li>
+                                <button type="button" class="open-duty-modal-btn" data-duty-name="{{ duty }}">{{ duty }}</button>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        
+                        <br>
                     </li>
                 {% endfor %}
             </ul>
+
+        <dialog id="duty-modal">
+            <h2 id="duty-modal-title"></h2>
+            <p id="duty-modal-description"></p>
             
             <br>
-        </li>
-    {% endfor %}
-</ul>
-
-<dialog id="duty-modal">
-    <h2 id="duty-modal-title"></h2>
-    <p id="duty-modal-description"></p>
-    
-    <br>
-    <button type="button" id="close-duty-modal-btn">Close</button>
-</dialog>
+            <button type="button" id="close-duty-modal-btn">Close</button>
+        </dialog>
+    </body>
+</html>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
