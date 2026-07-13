@@ -1,6 +1,76 @@
-<h1>Apprenticeship Coins</h1>
+<h1>Coins</h1>
 <ul>
     {% for coin in coins %}
-        <li>{{ coin.name }}</li>
+        <li>
+            <strong>{{ coin.name }}</strong>
+            
+            {% if coin.completed %}
+                <span>(Completed)</span>
+            {% else %}
+                <span>(In Progress)</span>
+            {% endif %}
+
+            {% if coin.duties|length == 0 %}
+                <p>There are no duties associated with this coin</p>
+            {% endif %}
+
+            <ul>
+                {% for duty in coin.duties %}
+                    <li>
+                       <button type="button" class="open-duty-modal-btn" data-duty-name="{{ duty }}">{{ duty }}</button>
+                    </li>
+                {% endfor %}
+            </ul>
+            
+            <br>
+        </li>
     {% endfor %}
 </ul>
+
+<dialog id="duty-modal">
+    <h2 id="duty-modal-title"></h2>
+    <p id="duty-modal-description"></p>
+    
+    <br>
+    <button type="button" id="close-duty-modal-btn">Close</button>
+</dialog>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const modal = document.getElementById('duty-modal');
+        const modalTitle = document.getElementById('duty-modal-title');
+        const modalDescription = document.getElementById('duty-modal-description');
+        const closeBtn = document.getElementById('close-duty-modal-btn');
+        const triggerButtons = document.querySelectorAll('.open-duty-modal-btn');
+
+        const API_BASE_URL = "http://localhost:5000";
+
+        triggerButtons.forEach(button => {
+            button.addEventListener('click', async () => {
+                const selectedDutyName = button.getAttribute('data-duty-name');
+                
+                modalTitle.textContent = selectedDutyName;
+                modalDescription.textContent = "Loading description ...";
+                
+                modal.showModal();
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/v1/duties`);
+                    if (!response.ok) throw new Error("Failed to get API response");
+                    
+                    const data = await response.json();
+                    const matchedDuty = data.find(d => d.name === selectedDutyName);
+                    
+                    modalDescription.textContent = matchedDuty ? matchedDuty.description : "No description found";
+                } catch (error) {
+                    console.error("Fetch failure:", error);
+                    modalDescription.textContent = "Error: Failed to fetch duty details";
+                }
+            });
+        });
+
+        closeBtn.addEventListener('click', () => {
+            modal.close();
+        });
+    });
+</script>
