@@ -20,6 +20,7 @@ def index():
             duties_data = duties_response.json()
             
             coin["duties"] = duties_data.get("linked_to", [])
+        coins_data.sort(key=lambda coin: coin["name"])
         return render_template("index.html", coins=coins_data, is_authenticated=is_authenticated)
     except requests.RequestException:
         return 'Error receiving API response', 500
