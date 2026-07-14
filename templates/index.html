@@ -16,10 +16,15 @@
         <li>
             <strong>{{ coin.name }}</strong>
 
-            {% if coin.completed %}
-            <span>(Completed)</span>
-            {% else %}
-            <span>(In Progress)</span>
+            <span class="coin-completion-status" id="status-text-{{ coin.id }}">
+                {{ '(Completed)' if coin.completed else '(In Progress)' }}
+            </span>
+
+            {% if is_authenticated %}
+            <label style="margin-left: 8px; cursor: pointer;">
+                <input type="checkbox" class="coin-completion-checkbox" data-coin-id="{{ coin.id }}" {{ 'checked' if
+                    coin.completed else '' }}>
+            </label>
             {% endif %}
 
             {% if coin.duties|length == 0 %}
@@ -86,6 +91,45 @@
 
         closeBtn.addEventListener('click', () => {
             modal.close();
+        });
+
+        const completionCheckboxes = document.querySelectorAll('.coin-completion-checkbox');
+
+        completionCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', async () => {
+                const coinId = checkbox.getAttribute('data-coin-id');
+                const isChecked = checkbox.checked;
+
+                const statusLabel = document.getElementById(`status-text-${coinId}`);
+
+                if (statusLabel) {
+                    statusLabel.textContent = isChecked ? '(Completed)' : '(In Progress)';
+                }
+
+                checkbox.disabled = true;
+
+                try {
+                    const response = await fetch(`/coins/${coinId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ completed: isChecked })
+                    });
+
+                    if (!response.ok) throw new Error("Failed to update completion status");
+
+                } catch (error) {
+                    console.error("Patch failure: ", error);
+
+                    checkbox.checked = !isChecked;
+                    if (statusLabel) {
+                        statusLabel.textContent = !isChecked ? '(Completed)' : '(In Progress)';
+                    }
+                } finally {
+                    checkbox.disabled = false;
+                }
+            });
         });
     });
 </script>

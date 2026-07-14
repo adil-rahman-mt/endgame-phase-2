@@ -73,5 +73,21 @@ def handle_logout():
     
     return response
 
+@app.route('/coins/<coin_id>', methods=['PATCH'])
+def update_coin_completion(coin_id):
+    token = request.cookies.get('auth_token')
+    if not token:
+        return 'Unauthorized user', 401
+        
+    try:
+        patch_response = requests.patch(
+            f"{API_BASE_URL}/api/v1/coins/{coin_id}",
+            json=request.get_json(),
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        return make_response(patch_response.text, patch_response.status_code)
+    except requests.RequestException:
+        return 'Server error', 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5005, debug=True)
