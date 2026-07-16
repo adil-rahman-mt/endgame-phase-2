@@ -4,13 +4,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
     <title>L4 DevOps Apprenticeship</title>
 </head>
 
 <body>
     {% include 'navbar.html' %}
 
-    <h1>Coins</h1>
+    {% if is_admin %}
+    <div class="create-coin-form">
+        <form action="/coins/create" method="POST">
+            <div class="form-group">
+                <label for="new_coin_name">Add a new coin </label>
+                <div class="form-row">
+                    <input type="text" id="new_coin_name" name="new_coin_name" required placeholder="e.g. Cloud">
+                    <button type="submit" class="btn btn-primary">+ Add</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    <h2>Coins</h2>
+    <p>Click on a duty to see it's description</p>
+
+    {% if is_authenticated %}
+    <p>Use the checkbox to update the status of a coin</p>
+    {% endif %}
+
     <ul>
         {% for coin in coins %}
         <li>
@@ -25,6 +46,12 @@
                 <input type="checkbox" class="coin-completion-checkbox" data-coin-id="{{ coin.id }}" {{ 'checked' if
                     coin.completed else '' }}>
             </label>
+            {% endif %}
+
+            {% if is_admin %}
+            <a href="/manage-coin/{{ coin.id }}" class="btn" style="margin-left: 12px; vertical-align: middle;">
+                Manage coin
+            </a>
             {% endif %}
 
             {% if coin.duties|length == 0 %}

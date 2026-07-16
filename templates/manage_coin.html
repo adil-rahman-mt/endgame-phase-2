@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Manage - {{ coin.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='manage_coin.css') }}">
+</head>
+
+<body>
+    {% include 'navbar.html' %}
+
+    <div class="container">
+        <h2>Update or delete the coin</h2>
+
+        <form action="/manage-coin/{{ coin.id }}/update" method="POST">
+
+            <div class="form-group">
+                <label for="coin-name">Coin name</label>
+                <input type="text" id="coin-name" name="name" value="{{ coin.name }}" required>
+            </div>
+            <input type="hidden" name="original_coin_name" value="{{ coin.name }}">
+
+            <div class="form-group">
+                <label>Associated duties</label>
+                <div class="checkbox-scroll-box">
+                    {% for duty in all_duties %}
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="duty-{{ duty.id }}" name="associated_duty_ids" value="{{ duty.id }}"
+                            {% if duty.name in coin.duties %}checked{% endif %}>
+                        <label for="duty-{{ duty.id }}">
+                            <strong>{{ duty.name }}</strong>
+                            {% if duty.description %}
+                            <span style="color: #666; font-size: 0.85rem;">- {{ duty.description }}</span>
+                            {% endif %}
+                        </label>
+                    </div>
+                    {% else %}
+                    <p style="color: #999; font-style: italic; font-size: 0.9rem; margin: 0;">No duties found.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="button-row">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a href="/" class="btn">Cancel</a>
+            </div>
+        </form>
+
+        <form action="/manage-coin/{{ coin.id }}/delete" method="POST"
+            onsubmit="return confirm('Are you sure you want to delete this coin?');">
+            <button type="submit" class="btn btn-delete">Delete coin</button>
+        </form>
+    </div>
+</body>
+
+</html>
