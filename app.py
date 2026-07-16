@@ -107,6 +107,7 @@ def handle_logout():
 @app.route('/coins/<coin_id>', methods=['PATCH'])
 def update_coin_completion_status(coin_id):
     token = request.cookies.get('auth_token')
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
     if not token:
         return 'Unauthorized user', 401
         
@@ -114,7 +115,7 @@ def update_coin_completion_status(coin_id):
         patch_response = requests.patch(
             f"{API_BASE_URL}/api/v1/coins/{coin_id}",
             json=request.get_json(),
-            headers={"Authorization": f"Bearer {token}"}
+            headers=headers
         )
         return make_response(patch_response.text, patch_response.status_code)
     except requests.RequestException:
@@ -128,12 +129,12 @@ def manage_coin_page(coin_id):
         return redirect(url_for('index'))
 
     token = request.cookies.get('auth_token')
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
 
     coin_resp = requests.get(f"{API_BASE_URL}/api/v1/coins/{coin_id}")
     coin = coin_resp.json() if coin_resp.status_code == 200 else {}
 
-    coin_duties_resp = requests.get(f"{API_BASE_URL}/api/v1/coins/{coin_id}/duties", headers=headers)
+    coin_duties_resp = requests.get(f"{API_BASE_URL}/api/v1/coins/{coin_id}/duties")
     coin_duties = coin_duties_resp.json().get("linked_to", []) if coin_duties_resp.status_code == 200 else []
 
     all_duties = get_all_duties()
@@ -167,7 +168,7 @@ def create_coin():
 @app.route('/manage-coin/<coin_id>/update', methods=['POST'])
 def update_coin(coin_id):
     token = request.cookies.get('auth_token')
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
 
     submitted_name = request.form.get('name', '').strip()
     original_name = request.form.get('original_coin_name', '').strip()
@@ -178,12 +179,12 @@ def update_coin(coin_id):
         requests.patch(f"{API_BASE_URL}/api/v1/coins/{coin_id}", json={"name": submitted_name}, headers=headers)
     
     # Get all duties, and create a name:Id map of duties
-    duties_resp = requests.get(f"{API_BASE_URL}/api/v1/duties", headers=headers)
+    duties_resp = requests.get(f"{API_BASE_URL}/api/v1/duties")
     all_duties = duties_resp.json() if duties_resp.status_code == 200 else []
     name_to_id_map = {duty['name']: duty['id'] for duty in all_duties}
 
     # Get IDs of all associated duties for the coin using the duties name:Id map
-    current_assoc_resp = requests.get(f"{API_BASE_URL}/api/v1/coins/{coin_id}/duties", headers=headers)
+    current_assoc_resp = requests.get(f"{API_BASE_URL}/api/v1/coins/{coin_id}/duties")
     current_assoc = current_assoc_resp.json() if current_assoc_resp.status_code == 200 else {}
     currently_linked_names = current_assoc.get("linked_to", [])
     currently_linked_ids = [name_to_id_map[name] for name in currently_linked_names if name in name_to_id_map]
@@ -204,7 +205,7 @@ def update_coin(coin_id):
 def delete_coin(coin_id):
     token = request.cookies.get('auth_token')
     if not token: return 'Unauthorized', 401
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
     
     try:
         requests.delete(f"{API_BASE_URL}/api/v1/coins/{coin_id}", headers=headers)
