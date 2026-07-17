@@ -1,21 +1,76 @@
-from flask import Flask, render_template, request, redirect, url_for, make_response
+from flask import Flask, render_template, request, redirect, url_for, make_response, g
 import requests
 import jwt
+import os
+from dotenv import load_dotenv
+from functools import wraps
+
+load_dotenv()
 
 app = Flask(__name__)
 
+app.config["JWT_SECRET_KEY"] = os.getenv("FLASK_JWT_SECRET_KEY")
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
+
 API_BASE_URL = "http://localhost:5000"
+
+def verify_token(token):
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, app.config["JWT_SECRET_KEY"], algorithms=["HS256"])
+        return payload
+    except jwt.ExpiredSignatureError:
+        print("Token has expired.")
+        return None
+    except jwt.InvalidTokenError:
+        print("Token signature is invalid.")
+        return None
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token = request.cookies.get('auth_token')
+        user_data = verify_token(token)
+        
+        if not user_data:
+            return redirect(url_for('login_page'))
+            
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token = request.cookies.get('auth_token')
+        user_data = verify_token(token)
+        
+        if not user_data:
+            return redirect(url_for('login_page'), code=303)
+            
+        if not user_data.get("is_admin"):
+            return redirect(url_for('index'), code=303)
+            
+        return f(*args, **kwargs)
+    return decorated_function
 
 def get_user_context():
     token = request.cookies.get('auth_token')
     is_authenticated = False
     is_admin = False
+    g.clear_expired_auth_token = False
 
     if token:
         try:
-            decoded = jwt.decode(token, options={"verify_signature": False})
+            decoded = jwt.decode(token, app.config["JWT_SECRET_KEY"], algorithms=["HS256"])
             is_authenticated = True
             is_admin = decoded.get('is_admin') is True
+        except jwt.ExpiredSignatureError:
+            print("Token has expired")
+            g.clear_expired_auth_token = True
+        except jwt.InvalidTokenError:
+            print("Token is invalid")
+            g.clear_expired_auth_token = True
         except Exception:
             pass
 
@@ -23,6 +78,12 @@ def get_user_context():
         "is_authenticated": is_authenticated,
         "is_admin": is_admin
     }
+
+@app.after_request
+def clear_expired_auth_tokens(response):
+    if 'clear_expired_auth_token' in g and g.clear_expired_auth_token:
+        response.delete_cookie('auth_token')
+    return response
 
 def get_all_coins_with_associated_duties():
     coins = []
@@ -105,6 +166,7 @@ def handle_logout():
     return response
 
 @app.route('/coins/<coin_id>', methods=['PATCH'])
+@login_required
 def update_coin_completion_status(coin_id):
     token = request.cookies.get('auth_token')
     headers = {"Authorization": f"Bearer {token}"} if token else {}
@@ -123,13 +185,11 @@ def update_coin_completion_status(coin_id):
     
 
 @app.route('/manage-coin/<coin_id>', methods=['GET'])
+@admin_required
 def manage_coin_page(coin_id):
     context = get_user_context()
     if not context.get("is_admin"):
         return redirect(url_for('index'))
-
-    token = request.cookies.get('auth_token')
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
 
     coin_resp = requests.get(f"{API_BASE_URL}/api/v1/coins/{coin_id}")
     coin = coin_resp.json() if coin_resp.status_code == 200 else {}
@@ -148,6 +208,7 @@ def manage_coin_page(coin_id):
     return render_template('manage_coin.html', coin=coin, all_duties=all_duties, **context)
 
 @app.route('/coins/create', methods=['POST'])
+@admin_required
 def create_coin():
     context = get_user_context()
     if not context.get("is_admin"):
@@ -166,6 +227,7 @@ def create_coin():
     return redirect(url_for('index'))
 
 @app.route('/manage-coin/<coin_id>/update', methods=['POST'])
+@admin_required
 def update_coin(coin_id):
     token = request.cookies.get('auth_token')
     headers = {"Authorization": f"Bearer {token}"} if token else {}
@@ -202,14 +264,17 @@ def update_coin(coin_id):
     return redirect(url_for('index'))
 
 @app.route('/manage-coin/<coin_id>/delete', methods=['POST'])
+@admin_required
 def delete_coin(coin_id):
     token = request.cookies.get('auth_token')
     if not token: return 'Unauthorized', 401
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     
     try:
-        requests.delete(f"{API_BASE_URL}/api/v1/coins/{coin_id}", headers=headers)
-        return redirect(url_for('index'))
+        response = requests.delete(f"{API_BASE_URL}/api/v1/coins/{coin_id}", headers=headers)
+        if response.status_code == 200:
+            return redirect(url_for('index'))
+        return redirect(url_for('manage_coin_page', coin_id=coin_id))
     except requests.RequestException as e:
         print("Error trying to delete coin: ", e)
 
