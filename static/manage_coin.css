@@ -50,6 +50,13 @@ input[type="text"] {
     background-color: #fafafa;
 }
 
+.checkbox-scroll-box > p {
+    color: #999;
+    font-style: italic;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
 .checkbox-row {
     display: flex;
     align-items: flex-start;

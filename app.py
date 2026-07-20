@@ -210,10 +210,6 @@ def manage_coin_page(coin_id):
 @app.route('/coins/create', methods=['POST'])
 @admin_required
 def create_coin():
-    context = get_user_context()
-    if not context.get("is_admin"):
-        return "Unauthorized", 401
-    
     token = request.cookies.get('auth_token')
     headers = {"Authorization": f"Bearer {token}"} if token else {}
 
