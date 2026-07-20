@@ -4,6 +4,10 @@
     <div class="nav-links">
         <a href="/" class="nav-link-item">Home</a>
 
+        {% if is_admin %}
+        <a href="/logs" class="nav-link-item">View Logs</a>
+        {% endif %}
+
         {% if is_authenticated %}
         <form action="/logout" method="POST" style="display: inline; margin: 0;">
             <button type="submit" class="btn-logout">Log Out</button>

@@ -4,6 +4,8 @@ import jwt
 import os
 from dotenv import load_dotenv
 from functools import wraps
+from collections import deque
+import datetime
 
 load_dotenv()
 
@@ -78,6 +80,24 @@ def get_user_context():
         "is_authenticated": is_authenticated,
         "is_admin": is_admin
     }
+
+REQUEST_LOGS = deque(maxlen=100)
+
+@app.after_request
+def log_outgoing_request(response):
+    if request.path.startswith('/static'):
+        return response
+
+    log_entry = {
+        "ip": request.headers.get('X-Forwarded-For', request.remote_addr),
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "method": request.method,
+        "path": request.path,
+        "status": response.status_code,
+    }
+    
+    REQUEST_LOGS.appendleft(log_entry)
+    return response
 
 @app.after_request
 def clear_expired_auth_tokens(response):
@@ -375,6 +395,13 @@ def delete_duty(duty_id):
         print("Error trying to delete duty: ", e)
         
     return redirect(url_for('index'), code=303)
+
+@app.route('/logs')
+@admin_required
+def view_request_logs():
+    context = get_user_context()
+    
+    return render_template('logs.html', logs=list(REQUEST_LOGS), **context)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5005, debug=True)

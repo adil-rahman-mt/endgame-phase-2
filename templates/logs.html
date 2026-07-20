@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity Logs</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='logs.css') }}">
+</head>
+
+<body>
+    {% include 'navbar.html' %}
+
+    <div>
+        <div>
+            <h2>Activity Log</h2>
+        </div>
+        <div class="table-scroll-container">
+            <table class="logs-table">
+                <thead>
+                    <tr>
+                        <th>IP Address</th>
+                        <th>Timestamp</th>
+                        <th>Method</th>
+                        <th>Path</th>
+                        <th>Status Code</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.ip }}</td>
+                        <td>{{ log.timestamp }}</td>
+                        <td>{{ log.method }}</td>
+                        <td>{{ log.path }}</td>
+                        <td>{{ log.status }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5">No HTTP requests recorded yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+
+</html>
