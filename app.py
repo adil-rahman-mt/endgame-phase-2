@@ -101,20 +101,33 @@ def get_all_coins_with_associated_duties():
     except requests.RequestException:
         return 'Error receiving API response', 500
     
-def get_all_duties():
+def get_all_duties_with_associated_ksbs():
     try:
-        response = requests.get(f"{API_BASE_URL}/api/v1/duties")
+        response = requests.get(f"{API_BASE_URL}/api/v1/duties/with-ksbs")
         duties = response.json() if response.status_code == 200 else []
         
         return duties
     except requests.RequestException:
-        return 'Error receiving API response', 500
+        print("Error fetching duties with associated KSBs.")
+    return []
+
+def get_all_ksbs():
+    try:
+        response = requests.get(f"{API_BASE_URL}/api/v1/ksb")
+        if response.status_code == 200:
+            data = response.json()
+            data.sort(key=lambda x: (x.get('type'), x.get('name')))
+            return data
+    except requests.RequestException:
+        print("Error fetching KSBs.")
+    return []
 
 @app.route('/')
 def index():
     context = get_user_context()
     coins = get_all_coins_with_associated_duties()
-    return render_template("index.html", coins=coins, **context)
+    duties = get_all_duties_with_associated_ksbs()
+    return render_template("index.html", coins=coins, duties=duties, **context)
 
 @app.route('/login')
 def login_page():
@@ -197,7 +210,7 @@ def manage_coin_page(coin_id):
     coin_duties_resp = requests.get(f"{API_BASE_URL}/api/v1/coins/{coin_id}/duties")
     coin_duties = coin_duties_resp.json().get("linked_to", []) if coin_duties_resp.status_code == 200 else []
 
-    all_duties = get_all_duties()
+    all_duties = get_all_duties_with_associated_ksbs()
 
     coin = {
         "id": coin_id,
@@ -274,6 +287,94 @@ def delete_coin(coin_id):
     except requests.RequestException as e:
         print("Error trying to delete coin: ", e)
 
+@app.route('/manage-duty/<duty_id>', methods=['GET'])
+@admin_required
+def manage_duty_page(duty_id):
+    context = get_user_context()
+    
+    all_duties = get_all_duties_with_associated_ksbs()
+    duty = next((duty for duty in all_duties if duty['id'] == duty_id), None)
+
+    if not duty:
+        return redirect(url_for('index'), code=303)
+        
+    all_ksbs = get_all_ksbs()
+    associated_ksb_names = [ksb['name'] for ksb in duty.get('ksbs', [])]
+
+    return render_template('manage_duty.html', duty=duty, all_ksbs=all_ksbs, associated_ksb_names=associated_ksb_names, **context)
+
+@app.route('/duties/create', methods=['POST'])
+@admin_required
+def create_duty():
+    token = request.cookies.get('auth_token')
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+
+    name = request.form.get('name').strip()
+    description = request.form.get('description').strip()
+    payload = {"name": name, "description": description}
+    
+    try:
+        requests.post(f"{API_BASE_URL}/api/v1/duties", json=payload, headers=headers)
+    except requests.RequestException as e:
+        print("Error trying to create coin: ", e)
+        
+    return redirect(url_for('index'))
+
+@app.route('/manage-duty/<duty_id>/update', methods=['POST'])
+@admin_required
+def update_duty(duty_id):
+    token = request.cookies.get('auth_token')
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+
+    submitted_name = request.form.get('name', '').strip()
+    submitted_desc = request.form.get('description', '').strip()
+    
+    original_name = request.form.get('original_duty_name', '').strip()
+    original_desc = request.form.get('original_duty_description', '').strip()
+    
+    submitted_ksb_ids = request.form.getlist('associated_ksb_ids')
+
+    metadata_payload = {}
+    if submitted_name and submitted_name != original_name:
+        metadata_payload["name"] = submitted_name
+    if submitted_desc and submitted_desc != original_desc:
+        metadata_payload["description"] = submitted_desc
+
+    if metadata_payload:
+        requests.patch(f"{API_BASE_URL}/api/v1/duties/{duty_id}", json=metadata_payload, headers=headers)
+    
+    current_assoc_resp = requests.get(f"{API_BASE_URL}/api/v1/duties/{duty_id}/ksb")
+    current_assoc = current_assoc_resp.json() if current_assoc_resp.status_code == 200 else {}
+    
+    currently_linked_ids = [str(ksb['id']) for ksb in current_assoc.get("linked_to", []) if 'id' in ksb]
+
+    for ksb_id in submitted_ksb_ids:
+        if ksb_id not in currently_linked_ids:
+            requests.post(f"{API_BASE_URL}/api/v1/duties/{duty_id}/ksb/{ksb_id}", headers=headers)
+
+    for ksb_id in currently_linked_ids:
+        if ksb_id not in submitted_ksb_ids:
+            requests.delete(f"{API_BASE_URL}/api/v1/duties/{duty_id}/ksb/{ksb_id}", headers=headers)
+
+    return redirect(url_for('index'))
+
+
+@app.route('/manage-duty/<duty_id>/delete', methods=['POST'])
+@admin_required
+def delete_duty(duty_id):
+    token = request.cookies.get('auth_token')
+    if not token: return 'Unauthorized', 401
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+
+    try:
+        res = requests.delete(f"{API_BASE_URL}/api/v1/duties/{duty_id}", headers=headers)
+        if res.status_code == 200:
+            return redirect(url_for('index'))
+        return redirect(url_for('manage_duty_page', duty_id=duty_id))
+    except requests.RequestException as e:
+        print("Error trying to delete duty: ", e)
+        
+    return redirect(url_for('index'), code=303)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5005, debug=True)

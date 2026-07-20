@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ duty.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='manage_duty.css') }}">
+</head>
+
+<body>
+    {% include 'navbar.html' %}
+
+    <div class="container">
+        <h2>Update or delete the duty</h2>
+
+        <form action="/manage-duty/{{ duty.id }}/update" method="POST">
+            <input type="hidden" name="original_duty_name" value="{{ duty.name }}">
+            <input type="hidden" name="original_duty_description" value="{{ duty.description }}">
+
+            <div class="form-group">
+                <label for="duty-name">Duty name</label>
+                <input type="text" id="duty-name" name="name" value="{{ duty.name }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="duty-description">Duty description</label>
+                <textarea id="duty-description" name="description" rows="3" required>{{ duty.description }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Associated KSBs</label>
+                <div class="checkbox-scroll-box">
+                    {% for ksb in all_ksbs %}
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="ksb-{{ ksb.id }}" name="associated_ksb_ids" value="{{ ksb.id }}" {%
+                            if ksb.name in associated_ksb_names %}checked{% endif %}>
+                        <label for="ksb-{{ ksb.id }}">
+                            <strong>{{ ksb.name }}</strong>
+                            {% if ksb.description %}
+                            <span>- {{ ksb.description }}</span>
+                            {% endif %}
+                        </label>
+                    </div>
+                    {% else %}
+                    <p>No KSBs found.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="button-row">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a href="/" class="btn">Cancel</a>
+            </div>
+        </form>
+
+        <form action="/manage-duty/{{ duty.id }}/delete" method="POST"
+            onsubmit="return confirm('Are you sure you want to delete this duty?');">
+            <button type="submit" class="btn btn-delete">Delete duty</button>
+        </form>
+    </div>
+</body>
+
+</html>

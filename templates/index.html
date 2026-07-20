@@ -13,9 +13,10 @@
 
     {% if is_admin %}
     <div class="create-coin-form">
+        <h3>Add a new coin</h3>
         <form action="/coins/create" method="POST">
             <div class="form-group">
-                <label for="new_coin_name">Add a new coin </label>
+                <label for="new_coin_name">Name</label>
                 <div class="form-row">
                     <input type="text" id="new_coin_name" name="new_coin_name" required placeholder="e.g. Cloud">
                     <button type="submit" class="btn btn-primary">+ Add</button>
@@ -25,11 +26,34 @@
     </div>
     {% endif %}
 
-    <h2>Coins</h2>
-    <p>Click on a duty to see it's description</p>
+    {% if is_admin %}
+    <div class="create-duty-form">
+        <h3>Add a new duty</h3>
+        <form action="/duties/create" method="POST">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" name="name" required placeholder="e.g. Duty 14">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="description" required rows="5" placeholder="Describe this duty..."></textarea>
+            </div>
+
+            <div class="button-row">
+                <button type="submit" class="btn btn-primary">+
+                    Add</button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    <div id="duties-data-bridge" data-all-duties='{{ duties | tojson | safe }}' style="display: none;"></div>
+
+    <h2>All coins</h2>
+    <p>Click a duty to see it's description and it's associated KSBs</p>
 
     {% if is_authenticated %}
-    <p>Use the checkbox to update the status of a coin</p>
+    <p>Use the checkbox to update the completion status of a coin</p>
     {% endif %}
 
     <ul>
@@ -71,12 +95,20 @@
         {% endfor %}
     </ul>
 
-    <dialog id="duty-modal">
+    <dialog id="duty-modal" data-is-admin="{{ 'true' if is_admin else 'false' }}">
         <h2 id="duty-modal-title"></h2>
         <p id="duty-modal-description"></p>
 
+        <div id="duty-modal-ksb" style="display: none;">
+            <h4>Associated KSBs</h4>
+            <ul id="modal-ksb-list"></ul>
+        </div>
         <br>
-        <button type="button" id="close-duty-modal-btn">Close</button>
+
+        <div style="display: flex; gap: 12px; align-items: center; margin-top: 16px;">
+            <div id="edit-duty-action"></div>
+            <button type="button" id="close-duty-modal-btn">Close</button>
+        </div>
     </dialog>
 </body>
 
@@ -90,29 +122,61 @@
         const closeBtn = document.getElementById('close-duty-modal-btn');
         const triggerButtons = document.querySelectorAll('.open-duty-modal-btn');
 
+        const ksbContainer = document.getElementById('duty-modal-ksb');
+        const ksbList = document.getElementById('modal-ksb-list');
+        const editDutyAction = document.getElementById('edit-duty-action');
+
+        const isAdmin = modal.getAttribute('data-is-admin') === 'true';
+
         const API_BASE_URL = "http://localhost:5000";
+
+        const dutiesDataBridge = document.getElementById('duties-data-bridge');
+        const allDuties = JSON.parse(dutiesDataBridge ? dutiesDataBridge.getAttribute('data-all-duties') : '[]');
 
         triggerButtons.forEach(button => {
             button.addEventListener('click', async () => {
                 const selectedDutyName = button.getAttribute('data-duty-name');
+                const matchedDuty = allDuties.find(duty => duty.name.trim() === selectedDutyName);
 
                 modalTitle.textContent = selectedDutyName;
                 modalDescription.textContent = "Loading description ...";
 
-                modal.showModal();
+                ksbList.innerHTML = "";
+                ksbContainer.style.display = "none";
+                editDutyAction.innerHTML = "";
 
-                try {
-                    const response = await fetch(`${API_BASE_URL}/api/v1/duties`);
-                    if (!response.ok) throw new Error("Failed to get API response");
+                if (matchedDuty) {
+                    modalTitle.textContent = matchedDuty.name;
+                    modalDescription.textContent = matchedDuty.description;
 
-                    const data = await response.json();
-                    const matchedDuty = data.find(d => d.name === selectedDutyName);
+                    ksbContainer.style.display = "block";
 
-                    modalDescription.textContent = matchedDuty ? matchedDuty.description : "No description found";
-                } catch (error) {
-                    console.error("Fetch failure:", error);
-                    modalDescription.textContent = "Error: Failed to fetch duty details";
+                    const linkedKsbs = matchedDuty.ksbs || [];
+                    if (linkedKsbs.length > 0) {
+                        linkedKsbs.forEach(ksb => {
+                            const li = document.createElement('li');
+                            li.style.marginBottom = "6px";
+                            li.innerHTML = `<strong>${ksb.name}:</strong> ${ksb.description}`;
+                            ksbList.appendChild(li);
+                        });
+                    } else {
+                        ksbList.innerHTML = "<li style='color:#777; list-style:none; font-style:italic;'>There are no KSBs associated to this duty.</li>";
+                    }
+
+                    if (isAdmin) {
+                        editDutyAction.innerHTML = `
+                        <a href="/manage-duty/${matchedDuty.id}" style="background-color: #efefef; color: black; padding: 2px 10px; text-decoration: none; border: 1px solid black; border-radius: 4px; font-size: 14px;">
+                            Manage duty
+                        </a>
+                    `;
+                    }
+                } else {
+                    modalTitle.textContent = selectedDutyName;
+                    modalDescription.textContent = "Duty information could not be found.";
+                    ksbList.innerHTML = "<li style='color:#777; list-style:none;'>No KSBs found.</li>";
                 }
+
+                modal.showModal();
             });
         });
 
