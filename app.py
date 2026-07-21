@@ -14,7 +14,7 @@ app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = os.getenv("FLASK_JWT_SECRET_KEY")
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
-API_BASE_URL = f"http://{os.getenv("EC2_HOST")}"
+API_BASE_URL = "http://172.17.0.1"
 
 def verify_token(token):
     if not token:
