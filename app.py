@@ -118,7 +118,8 @@ def get_all_coins_with_associated_duties():
         coins.sort(key=lambda coin: coin["name"])
         
         return coins
-    except requests.RequestException:
+    except requests.RequestException as e:
+        print(f"API CONNECTION FAILED\nError: {e}")
         return 'Error receiving API response', 500
     
 def get_all_duties_with_associated_ksbs():
@@ -127,7 +128,8 @@ def get_all_duties_with_associated_ksbs():
         duties = response.json() if response.status_code == 200 else []
         
         return duties
-    except requests.RequestException:
+    except requests.RequestException as e:
+        print(f"API CONNECTION FAILED\nError: {e}")
         print("Error fetching duties with associated KSBs.")
     return []
 
@@ -138,7 +140,8 @@ def get_all_ksbs():
             data = response.json()
             data.sort(key=lambda x: (x.get('type'), x.get('name')))
             return data
-    except requests.RequestException:
+    except requests.RequestException as e:
+        print(f"API CONNECTION FAILED\nError: {e}")
         print("Error fetching KSBs.")
     return []
 
