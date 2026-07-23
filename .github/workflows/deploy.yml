@@ -24,9 +24,13 @@ jobs:
           username: ${{secrets.EC2_USER}}
           key: ${{secrets.EC2_SSH_KEY}}
           script: |
+            set -e
+
             cd ~/endgame-phase-2 || git clone https://github.com/adil-rahman-mt/endgame-phase-2.git
             cd ~/endgame-phase-2
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
 
             sudo docker build -t fe-img:latest .
             sudo docker stop fe-cont || true
@@ -34,7 +38,6 @@ jobs:
 
             sudo docker run -d --restart unless-stopped \
             -p 5005:5005 \
-            -e PYTHONUNBUFFERED=1 \
             -e FLASK_JWT_SECRET_KEY="${{ secrets.FLASK_JWT_SECRET_KEY }}" \
             -e FLASK_SECRET_KEY="${{ secrets.FLASK_SECRET_KEY }}" \
             -e EC2_HOST="${{ secrets.EC2_HOST }}" \

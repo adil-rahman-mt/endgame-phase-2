@@ -108,21 +108,14 @@ def clear_expired_auth_tokens(response):
 def get_all_coins_with_associated_duties():
     coins = []
     try:
-        target_url = f"{API_BASE_URL}/api/v1/coins"
-        print(f"get_all_coins - requesting URL: {target_url}", flush=True)
-
         coins = requests.get(f"{API_BASE_URL}/api/v1/coins").json()
         
         for coin in coins:
             coin_id = coin["id"]
-            loop_url = f"{API_BASE_URL}/api/v1/coins/{coin_id}/duties"
-            print(f"get_all_coins - requesting loop URL: {loop_url}", flush=True)
-
             duties_for_coin = requests.get(f"{API_BASE_URL}/api/v1/coins/{coin_id}/duties").json()
-            
             coin["duties"] = duties_for_coin.get("linked_to", [])
+
         coins.sort(key=lambda coin: coin["name"])
-        
         return coins
     except requests.RequestException as e:
         print(f"API CONNECTION FAILED\nError: {e}")
@@ -130,9 +123,6 @@ def get_all_coins_with_associated_duties():
     
 def get_all_duties_with_associated_ksbs():
     try:
-        target_url = f"{API_BASE_URL}/api/v1/duties/with-ksbs"
-        print(f"get_all_duties - requesting URL: {target_url}", flush=True)
-
         response = requests.get(f"{API_BASE_URL}/api/v1/duties/with-ksbs")
         duties = response.json() if response.status_code == 200 else []
         
@@ -144,9 +134,6 @@ def get_all_duties_with_associated_ksbs():
 
 def get_all_ksbs():
     try:
-        target_url = f"{API_BASE_URL}/api/v1/ksb"
-        print(f"get_all_ksbs - requesting URL: {target_url}", flush=True)
-
         response = requests.get(f"{API_BASE_URL}/api/v1/ksb")
         if response.status_code == 200:
             data = response.json()
