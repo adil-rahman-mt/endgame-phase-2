@@ -14,7 +14,7 @@ app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = os.getenv("FLASK_JWT_SECRET_KEY")
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
-API_BASE_URL = "http://172.17.0.1:5000"
+API_BASE_URL = os.environ.get("API_BASE_URL", "http://127.0.0.1:5000")
 
 def verify_token(token):
     if not token:

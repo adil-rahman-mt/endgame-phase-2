@@ -38,6 +38,7 @@ jobs:
 
             sudo docker run -d --restart unless-stopped \
             -p 5005:5005 \
+            -e API_BASE_URL="${{ secrets.API_BASE_URL }}" \
             -e FLASK_JWT_SECRET_KEY="${{ secrets.FLASK_JWT_SECRET_KEY }}" \
             -e FLASK_SECRET_KEY="${{ secrets.FLASK_SECRET_KEY }}" \
             -e EC2_HOST="${{ secrets.EC2_HOST }}" \
