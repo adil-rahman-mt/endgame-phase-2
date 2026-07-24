@@ -167,7 +167,7 @@ def handle_login():
 
     try:
         backend_response = requests.post(
-            f"{API_BASE_URL}/login", 
+            f"{API_BASE_URL}/api/login", 
             json={"username": username, "password": password}
         )
         
